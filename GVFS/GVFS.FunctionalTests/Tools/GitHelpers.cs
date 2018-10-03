@@ -79,12 +79,22 @@ namespace GVFS.FunctionalTests.Tools
             string command,
             params object[] args)
         {
+            ValidateGitCommand(enlistment, controlGitRepo, null, command, args);
+        }
+
+        public static void ValidateGitCommand(
+            GVFSFunctionalTestEnlistment enlistment,
+            ControlGitRepo controlGitRepo,
+            Dictionary<string, string> environmentVariables,
+            string command,
+            params object[] args)
+        {
             command = string.Format(command, args);
             string controlRepoRoot = controlGitRepo.RootPath;
             string gvfsRepoRoot = enlistment.RepoRoot;
 
-            ProcessResult expectedResult = GitProcess.InvokeProcess(controlRepoRoot, command);
-            ProcessResult actualResult = GitHelpers.InvokeGitAgainstGVFSRepo(gvfsRepoRoot, command);
+            ProcessResult expectedResult = GitProcess.InvokeProcess(controlRepoRoot, command, environmentVariables);
+            ProcessResult actualResult = GitHelpers.InvokeGitAgainstGVFSRepo(gvfsRepoRoot, command, environmentVariables);
 
             ErrorsShouldMatch(command, expectedResult, actualResult);
             actualResult.Output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)

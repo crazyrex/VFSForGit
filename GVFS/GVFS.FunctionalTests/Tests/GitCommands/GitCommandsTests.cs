@@ -3,6 +3,7 @@ using GVFS.FunctionalTests.Tools;
 using GVFS.Tests.Should;
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 
@@ -23,7 +24,7 @@ namespace GVFS.FunctionalTests.Tests.GitCommands
         private static readonly string RenameFilePathTo = Path.Combine("GVFS", "GVFS.Common", "Physical", "FileSystem", "FileProperties2.cs");
         private static readonly string RenameFolderPathFrom = Path.Combine("GVFS", "GVFS.Common", "PrefetchPacks");
         private static readonly string RenameFolderPathTo = Path.Combine("GVFS", "GVFS.Common", "PrefetchPacksRenamed");
-       
+
         public GitCommandsTests() : base(enlistmentPerTest: false)
         {
         }
@@ -43,6 +44,48 @@ namespace GVFS.FunctionalTests.Tests.GitCommands
         public void StatusTest()
         {
             this.ValidateGitCommand("status");
+        }
+
+        [TestCase]
+        public void StatusWithGitTraceTest()
+        {
+            Dictionary<string, string> environmentVariables = new Dictionary<string, string>();
+
+            string tracePath = Path.Combine(this.Enlistment.EnlistmentRoot, "trace-log.txt");
+            environmentVariables["GIT_TRACE"] = tracePath;
+            this.ValidateGitCommand(environmentVariables, "status");
+
+            this.FileSystem.FileExists(tracePath).ShouldBeTrue();
+
+            string lineToFind = "trace: built-in: git status";
+            int count = 0;
+
+            foreach (string line in this.FileSystem.ReadAllText(tracePath).Split('\n'))
+            {
+                if (line.IndexOf(lineToFind) >= 0)
+                {
+                    count++;
+                }
+            }
+
+            // The GIT_TRACE output is appended to the file, so we should have
+            // one copy for each run: normal and virtualized.
+            count.ShouldEqual(2);
+        }
+
+        [TestCase]
+        public void StatusWithGitTraceInvalidCharactersTest()
+        {
+            Dictionary<string, string> environmentVariables = new Dictionary<string, string>();
+
+            if (Path.GetInvalidPathChars().Length == 0)
+            {
+                return;
+            }
+
+            string tracePath = Path.Combine(this.Enlistment.EnlistmentRoot, $"trace-log{Path.GetInvalidPathChars()[0]}.txt");
+            environmentVariables["GIT_TRACE"] = tracePath;
+            this.ValidateGitCommand(environmentVariables, "status");
         }
 
         [TestCase]
@@ -263,27 +306,27 @@ namespace GVFS.FunctionalTests.Tests.GitCommands
         {
             this.FolderShouldExistAndHaveFile("GitCommandsTests", "RenameFileTests", "1", "#test");
             this.MoveFile(
-                Path.Combine("GitCommandsTests", "RenameFileTests", "1", "#test"), 
+                Path.Combine("GitCommandsTests", "RenameFileTests", "1", "#test"),
                 Path.Combine("GitCommandsTests", "RenameFileTests", "1", "#testRenamed"));
 
             this.FolderShouldExistAndHaveFile("GitCommandsTests", "RenameFileTests", "2", "$test");
             this.MoveFile(
-                Path.Combine("GitCommandsTests", "RenameFileTests", "2", "$test"), 
+                Path.Combine("GitCommandsTests", "RenameFileTests", "2", "$test"),
                 Path.Combine("GitCommandsTests", "RenameFileTests", "2", "$testRenamed"));
 
             this.FolderShouldExistAndHaveFile("GitCommandsTests", "RenameFileTests", "3", ")");
             this.MoveFile(
-                Path.Combine("GitCommandsTests", "RenameFileTests", "3", ")"), 
+                Path.Combine("GitCommandsTests", "RenameFileTests", "3", ")"),
                 Path.Combine("GitCommandsTests", "RenameFileTests", "3", ")Renamed"));
 
             this.FolderShouldExistAndHaveFile("GitCommandsTests", "RenameFileTests", "4", "+.test");
             this.MoveFile(
-                Path.Combine("GitCommandsTests", "RenameFileTests", "4", "+.test"), 
+                Path.Combine("GitCommandsTests", "RenameFileTests", "4", "+.test"),
                 Path.Combine("GitCommandsTests", "RenameFileTests", "4", "+.testRenamed"));
 
             this.FolderShouldExistAndHaveFile("GitCommandsTests", "RenameFileTests", "5", "-.test");
             this.MoveFile(
-                Path.Combine("GitCommandsTests", "RenameFileTests", "5", "-.test"), 
+                Path.Combine("GitCommandsTests", "RenameFileTests", "5", "-.test"),
                 Path.Combine("GitCommandsTests", "RenameFileTests", "5", "-.testRenamed"));
 
             this.ValidateGitCommand("status");

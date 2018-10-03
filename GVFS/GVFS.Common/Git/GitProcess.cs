@@ -1,6 +1,5 @@
 using GVFS.Common.FileSystem;
 using GVFS.Common.Tracing;
-using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -149,7 +148,7 @@ namespace GVFS.Common.Git
             Result result = this.InvokeGitAgainstDotGitFolder("rev-parse --show-toplevel");
             return !result.HasErrors;
         }
-                
+
         public Result RevParse(string gitRef)
         {
             return this.InvokeGitAgainstDotGitFolder("rev-parse " + gitRef);
@@ -405,11 +404,20 @@ namespace GVFS.Common.Git
 
             // Removing trace variables that might change git output and break parsing
             // List of environment variables: https://git-scm.com/book/gr/v2/Git-Internals-Environment-Variables
-            foreach (string key in processInfo.EnvironmentVariables.Keys.Cast<string>()
-                .Where(x => x.StartsWith("GIT_TRACE", StringComparison.OrdinalIgnoreCase))
-                .ToList())
+            foreach (string key in processInfo.EnvironmentVariables.Keys.Cast<string>())
             {
-                processInfo.EnvironmentVariables.Remove(key);
+                // If GIT_TRACE is set to a fully-rooted path, then Git sends the trace
+                // output to that path instead of stdout (GIT_TRACE=1) or stderr (GIT_TRACE=2).
+                if (key.StartsWith("GIT_TRACE", StringComparison.OrdinalIgnoreCase))
+                {
+                    string value = processInfo.EnvironmentVariables[key];
+
+                    if (value.IndexOfAny(Path.GetInvalidPathChars()) >= 0
+                        || !Path.IsPathRooted(processInfo.EnvironmentVariables[key]))
+                    {
+                        processInfo.EnvironmentVariables.Remove(key);
+                    }
+                }
             }
 
             processInfo.EnvironmentVariables["GIT_TERMINAL_PROMPT"] = "0";
@@ -601,7 +609,7 @@ namespace GVFS.Common.Git
                 parseStdOutLine: parseStdOutLine,
                 timeoutMs: -1);
         }
-        
+
         public class Result
         {
             public const int SuccessCode = 0;

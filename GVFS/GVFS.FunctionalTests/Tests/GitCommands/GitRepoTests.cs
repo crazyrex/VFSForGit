@@ -3,8 +3,7 @@ using GVFS.FunctionalTests.Should;
 using GVFS.FunctionalTests.Tools;
 using GVFS.Tests.Should;
 using NUnit.Framework;
-using NUnit.Framework.Interfaces;
-using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -178,6 +177,16 @@ namespace GVFS.FunctionalTests.Tests.GitCommands
             GitHelpers.ValidateGitCommand(
                 this.Enlistment,
                 this.ControlGitRepo,
+                command,
+                args);
+        }
+
+        protected void ValidateGitCommand(Dictionary<string, string> environmentVariables, string command, params object[] args)
+        {
+            GitHelpers.ValidateGitCommand(
+                this.Enlistment,
+                this.ControlGitRepo,
+                environmentVariables,
                 command,
                 args);
         }
